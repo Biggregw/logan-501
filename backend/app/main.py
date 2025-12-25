@@ -15,14 +15,15 @@ app.include_router(camera_router)
 
 @app.get("/", include_in_schema=False)
 def root(request: Request):
-    # If a browser hits the root, take them to Swagger UI.
+    # If a browser hits the root, take them to the camera setup page.
     # Keep the JSON response for API clients (e.g. curl, fetch).
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" in accept:
-        return RedirectResponse(url="/docs")
+        return RedirectResponse(url="/camera-setup")
     return {
         "name": "Logan 501",
         "docs": "/docs",
+        "camera_setup": "/camera-setup",
         "health": "/health",
         "endpoints": [
             "POST /cameras",

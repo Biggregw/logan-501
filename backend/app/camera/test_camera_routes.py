@@ -6,6 +6,20 @@ from app.camera.store import get_camera_store
 from app.main import app
 
 
+def test_root_redirects_browsers_to_camera_setup() -> None:
+    client = TestClient(app)
+    r = client.get("/", headers={"accept": "text/html"}, follow_redirects=False)
+    assert r.status_code in {302, 307}, r.text
+    assert r.headers["location"] == "/camera-setup"
+
+
+def test_camera_setup_page_loads() -> None:
+    client = TestClient(app)
+    r = client.get("/camera-setup", headers={"accept": "text/html"})
+    assert r.status_code == 200, r.text
+    assert "Camera setup" in r.text
+
+
 def test_push_camera_upload_and_fetch_latest_jpeg() -> None:
     get_camera_store().clear()
     client = TestClient(app)
