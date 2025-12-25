@@ -10,6 +10,23 @@ app = FastAPI(title="Logan 501")
 store = get_store()
 
 
+@app.get("/", include_in_schema=False)
+def root():
+    return {
+        "name": "Logan 501",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": [
+            "GET /game",
+            "POST /game/reset",
+            "POST /game/visit",
+            "POST /game/undo",
+            "GET /game/checkout?remaining=<int>",
+            "GET /game/stats",
+        ],
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
