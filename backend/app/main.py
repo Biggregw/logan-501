@@ -8,18 +8,25 @@ from app.scoring.checkout import suggest_checkouts
 from app.scoring.store import get_store
 from app.scoring.stats import compute_match_stats, MatchStats, PlayerStats
 
-app = FastAPI(title="Logan 501")
+app = FastAPI(
+    title="Logan 501",
+    # Be explicit so Swagger UI never occupies "/".
+    docs_url="/docs",
+    openapi_url="/openapi.json",
+)
 store = get_store()
 app.include_router(camera_router)
 
 
 @app.get("/", include_in_schema=False)
 def root(request: Request):
-    # If a browser hits the root, take them to the camera setup page.
-    # Keep the JSON response for API clients (e.g. curl, fetch).
-    accept = (request.headers.get("accept") or "").lower()
-    if "text/html" in accept:
-        return RedirectResponse(url="/camera-setup")
+    # Default landing page should be camera setup.
+    # If an API client wants JSON "about" info, call GET /info instead.
+    return RedirectResponse(url="/camera-setup")
+
+
+@app.get("/info", include_in_schema=False)
+def info() -> dict:
     return {
         "name": "Logan 501",
         "docs": "/docs",
