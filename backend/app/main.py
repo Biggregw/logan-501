@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+from app.camera.routes import router as camera_router
 from app.scoring.game import Dart, MatchConfig, MatchState, VisitResult
 from app.scoring.checkout import suggest_checkouts
 from app.scoring.store import get_store
@@ -9,6 +10,7 @@ from app.scoring.stats import compute_match_stats, MatchStats, PlayerStats
 
 app = FastAPI(title="Logan 501")
 store = get_store()
+app.include_router(camera_router)
 
 
 @app.get("/", include_in_schema=False)
@@ -23,6 +25,12 @@ def root(request: Request):
         "docs": "/docs",
         "health": "/health",
         "endpoints": [
+            "POST /cameras",
+            "GET /cameras",
+            "GET /cameras/{camera_id}",
+            "DELETE /cameras/{camera_id}",
+            "POST /cameras/{camera_id}/frame (push cameras)",
+            "GET /cameras/{camera_id}/latest.jpg (push+rtsp)",
             "GET /game",
             "POST /game/reset",
             "POST /game/visit",
