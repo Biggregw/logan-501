@@ -520,8 +520,24 @@ _CAMERA_SETUP_HTML = """<!doctype html>
           return;
         }
 
+        // Most mobile browsers require a secure context (HTTPS) for camera access.
+        // On plain HTTP (non-localhost), navigator.mediaDevices is often unavailable.
+        if (!window.isSecureContext) {
+          const host = (location && location.host) ? location.host : "this host";
+          showToast(
+            phoneMsg,
+            `Camera access is blocked on insecure HTTP. Open this page over HTTPS (recommended), or use localhost. Current: ${host}.`,
+            "bad"
+          );
+          return;
+        }
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          showToast(phoneMsg, "This browser doesn’t support getUserMedia(). Try a modern mobile browser.", "bad");
+          showToast(
+            phoneMsg,
+            "Camera API unavailable (getUserMedia). If you're on a phone, this usually means the page isn't served over HTTPS.",
+            "bad"
+          );
           return;
         }
 
@@ -532,7 +548,8 @@ _CAMERA_SETUP_HTML = """<!doctype html>
           });
           phoneVideo.srcObject = phoneStream;
         } catch (e) {
-          showToast(phoneMsg, `Camera permission failed: ${e.message || e}`, "bad");
+          const msg = (e && (e.name || e.message)) ? `${e.name || "Error"}: ${e.message || ""}`.trim() : String(e);
+          showToast(phoneMsg, `Camera start failed: ${msg}`, "bad");
           return;
         }
 
