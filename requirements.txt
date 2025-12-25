@@ -2,3 +2,5 @@ fastapi
 uvicorn
 opencv-python-headless
 pytest
+httpx
+python-multipart
