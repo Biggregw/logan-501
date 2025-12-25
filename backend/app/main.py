@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from app.scoring.game import Dart, MatchConfig, MatchState, VisitResult
@@ -11,7 +12,12 @@ store = get_store()
 
 
 @app.get("/", include_in_schema=False)
-def root():
+def root(request: Request):
+    # If a browser hits the root, take them to Swagger UI.
+    # Keep the JSON response for API clients (e.g. curl, fetch).
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        return RedirectResponse(url="/docs")
     return {
         "name": "Logan 501",
         "docs": "/docs",
