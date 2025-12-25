@@ -26,6 +26,8 @@ Docker:
 docker compose up --build
 ```
 
+This publishes the API on **host port 8000** (e.g. `http://<your-server-ip>:8000/health`).
+
 Local (example):
 
 ```bash
