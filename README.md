@@ -78,46 +78,21 @@ curl -sS "http://localhost:8000/cameras/<camera_id>/latest.jpg" --output snapsho
 Docker:
 
 ```bash
-cp .env.example .env
-# Edit .env and set LOGAN_HOST to your server's LAN IP or hostname
 docker compose up --build
 ```
 
-This publishes:
-
-- HTTPS UI/API on **host port 443** (recommended): `https://<LOGAN_HOST>/camera-setup`
-- HTTP redirect on **host port 80**: `http://<LOGAN_HOST>/` → HTTPS
-- Direct HTTP API on **host port 8000** (optional): `http://<your-server-ip>:8000/health`
+This publishes the API on **host port 8000** (e.g. `http://<your-server-ip>:8000/health`).
 
 ### Phone browser camera note (required for streaming)
 
-Phone browsers require HTTPS for camera access. With the Caddy proxy enabled, open:
+Phone browsers require HTTPS for camera access (`getUserMedia` needs a secure context).
 
-- `https://<LOGAN_HOST>/camera-setup`
+If you already have Nginx, terminate TLS there and proxy to this app on `http://127.0.0.1:8000`.
+An example site config is included at `deploy/nginx/logan501.conf`.
 
-Because this uses an **internal (self-signed) TLS certificate**, your phone must trust Caddy’s local CA once.
+After HTTPS is set up, open this on your phone:
 
-#### Export the Caddy root CA cert
-
-From the machine running docker:
-
-```bash
-docker compose exec caddy sh -lc 'ls -1 /data/caddy/pki/authorities/local/root.crt'
-docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
-```
-
-Then install/trust `caddy-root.crt` on your phone (steps differ by OS).
-
-#### Android (quick outline)
-
-- Copy `caddy-root.crt` to the phone.
-- Settings → Security/Privacy → Encryption & credentials → Install a certificate → **CA certificate** → select the file.
-
-#### iOS (quick outline)
-
-- AirDrop/email the `caddy-root.crt` to the phone and open it.
-- Install the profile: Settings → Profile Downloaded.
-- Enable trust: Settings → General → About → Certificate Trust Settings → enable trust for the new CA.
+- `https://<your-hostname-or-ip>/camera-setup`
 
 Local (example):
 
