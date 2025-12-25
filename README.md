@@ -79,45 +79,12 @@ Docker:
 
 ```bash
 cp .env.example .env
-# Edit .env and set LOGAN_HOST to your server's LAN IP or hostname
 docker compose up --build
 ```
 
-This publishes:
+This publishes the backend on:
 
-- HTTPS UI/API on **host port 443** (recommended): `https://<LOGAN_HOST>/camera-setup`
-- HTTP redirect on **host port 80**: `http://<LOGAN_HOST>/` → HTTPS
-- Direct HTTP API on **host port 8000** (optional): `http://<your-server-ip>:8000/health`
-
-### Phone browser camera note (required for streaming)
-
-Phone browsers require HTTPS for camera access. With the Caddy proxy enabled, open:
-
-- `https://<LOGAN_HOST>/camera-setup`
-
-Because this uses an **internal (self-signed) TLS certificate**, your phone must trust Caddy’s local CA once.
-
-#### Export the Caddy root CA cert
-
-From the machine running docker:
-
-```bash
-docker compose exec caddy sh -lc 'ls -1 /data/caddy/pki/authorities/local/root.crt'
-docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
-```
-
-Then install/trust `caddy-root.crt` on your phone (steps differ by OS).
-
-#### Android (quick outline)
-
-- Copy `caddy-root.crt` to the phone.
-- Settings → Security/Privacy → Encryption & credentials → Install a certificate → **CA certificate** → select the file.
-
-#### iOS (quick outline)
-
-- AirDrop/email the `caddy-root.crt` to the phone and open it.
-- Install the profile: Settings → Profile Downloaded.
-- Enable trust: Settings → General → About → Certificate Trust Settings → enable trust for the new CA.
+- HTTP UI/API on **host port 8000**: `http://<your-server-ip>:8000/health`
 
 Local (example):
 
@@ -125,3 +92,117 @@ Local (example):
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
 ```
+
+### Phone browser camera note (required for streaming)
+
+Phone browsers require **HTTPS** for camera access. For production use, put this app behind a real HTTPS reverse proxy (recommended: Nginx Proxy Manager) and open:
+
+- `https://<your-domain>/camera-setup`
+
+## Production HTTPS Setup (DuckDNS + Nginx Proxy Manager)
+
+This setup uses your existing **Nginx Proxy Manager (NPM)** to terminate TLS with a free **Let’s Encrypt** certificate, so phone browsers can access `/camera-setup` with valid HTTPS.
+
+This **eliminates the need for any Caddy self-signed certificate / “trust this CA on your phone”** workflow.
+
+### 1) Get a free domain with DuckDNS.org and point it at your server
+
+1. Create an account at DuckDNS and add a subdomain (example): `logan501.duckdns.org`
+2. From the DuckDNS dashboard, copy your **token**
+3. Keep DuckDNS updated with your current public IP (pick one approach):
+
+- Option A (simple cron job on the server):
+
+```bash
+# Replace SUBDOMAIN and TOKEN, then run periodically (e.g. every 5 minutes)
+curl -fsS "https://www.duckdns.org/update?domains=SUBDOMAIN&token=TOKEN&ip="
+```
+
+- Option B (DuckDNS “install” script / client):
+  - Use the DuckDNS site’s install instructions to run their updater on your server.
+
+After DNS updates, verify your domain resolves to your server’s public IP:
+
+- `logan501.duckdns.org` → your server
+
+Important for Let’s Encrypt:
+
+- Your router/firewall must allow inbound **80/443** to the machine running NPM.
+- If your ISP uses CGNAT (no public inbound ports), Let’s Encrypt HTTP validation may fail without an alternative setup.
+
+### 2) Configure Nginx Proxy Manager (NPM) to proxy Logan-501 and request SSL
+
+Pre-reqs:
+
+- NPM is already listening on **ports 80/443** on the server
+- The Logan-501 backend is reachable from NPM at `http://<server-ip>:8000`
+  - Most commonly this is your server’s **LAN IP** (example: `192.168.1.10`) and port `8000`
+  - In this repo’s `docker-compose.yml`, the container’s port `8000` is published on the host as `8000:8000`, so NPM can forward to the host’s port `8000`.
+  - If your NPM container is on the same Docker network as this app, you can also use **Forward Hostname** = `logan501` and **Forward Port** = `8000`.
+
+#### Create a Proxy Host
+
+In the NPM admin UI:
+
+1. Go to **Hosts → Proxy Hosts**
+2. Click **Add Proxy Host**
+3. Fill in the fields like this (example values shown):
+
+**Screenshot 1: “Add Proxy Host” → Details tab**
+
+- **Domain Names**: `logan501.duckdns.org`
+- **Scheme**: `http`
+- **Forward Hostname / IP**: `<YOUR_SERVER_LAN_IP>` (example: `192.168.1.10`)
+- **Forward Port**: `8000`
+- **Cache Assets**: off (optional)
+- **Block Common Exploits**: on (recommended)
+- **Websockets Support**: off (optional)
+
+**Screenshot 1b: “Add Proxy Host” → Advanced tab (optional)**
+
+If you upload larger JPEG frames and see `413 Request Entity Too Large`, add:
+
+```nginx
+client_max_body_size 20m;
+```
+
+#### Request a Let’s Encrypt certificate
+
+Still in the same “Add Proxy Host” modal:
+
+1. Open the **SSL** tab
+2. Select **Request a new SSL Certificate**
+3. Toggle:
+   - **Force SSL**: on
+   - **HTTP/2 Support**: on (recommended)
+   - **HSTS Enabled**: optional (recommended once you’re confident things work)
+4. Agree to the Let’s Encrypt TOS
+5. Click **Save**
+
+**Screenshot 2: “Add Proxy Host” → SSL tab**
+
+- **SSL Certificate**: “Request a new SSL Certificate”
+- **Email Address**: your email (used by Let’s Encrypt)
+- **Force SSL**: enabled
+- **HTTP/2 Support**: enabled
+- **HSTS Enabled**: optional
+
+**Screenshot 3: “Proxy Hosts” list after saving**
+
+- You should see an entry for `logan501.duckdns.org` showing it forwards to `<YOUR_SERVER_LAN_IP>:8000`, with SSL enabled.
+
+### 3) Validate from your phone
+
+On your phone (on cellular or Wi‑Fi), open:
+
+- `https://logan501.duckdns.org/camera-setup`
+
+Quick checks:
+
+- `https://logan501.duckdns.org/health` should return `{"ok":true,...}` (or similar)
+- The camera preview should load without “HTTPS / secure context” errors
+
+### Notes / troubleshooting
+
+- **Port 8000 exposure**: Ideally keep `8000` accessible only on your LAN (or only from the NPM host) and expose **only 80/443** to the internet.
+- **NPM → backend connectivity**: If NPM is running in Docker and cannot reach the host via `127.0.0.1`, use the server’s LAN IP (recommended) or your Docker host gateway address.
