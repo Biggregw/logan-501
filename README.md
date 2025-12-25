@@ -34,6 +34,8 @@ This backend supports two camera source types:
 
 ### Phone camera (push frames)
 
+Important: **phone browser camera capture requires HTTPS** (a "secure context") on most modern mobile browsers. If you open the UI on a phone at `http://<server>:8000/camera-setup`, the browser may hide/disable `getUserMedia()` and you’ll see an error and no preview. Fix by serving this app behind HTTPS (reverse proxy / tunnel), then open the `https://.../camera-setup` URL on your phone.
+
 1) Register a push camera:
 
 ```bash
