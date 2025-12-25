@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.scoring.game import Game501TwoPlayer
+from app.scoring.game import Game501MatchTwoPlayer
 
 
 class InMemoryGameStore:
@@ -9,9 +9,9 @@ class InMemoryGameStore:
     """
 
     def __init__(self) -> None:
-        self._game = Game501TwoPlayer()
+        self._game = Game501MatchTwoPlayer()
 
-    def game(self) -> Game501TwoPlayer:
+    def game(self) -> Game501MatchTwoPlayer:
         return self._game
 
 
