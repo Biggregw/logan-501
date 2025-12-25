@@ -3,7 +3,7 @@ services:
     build:
       context: .
     ports:
-      - "8000:8000"
+      - "8001:8000"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()\""]
       interval: 10s
